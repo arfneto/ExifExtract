@@ -1,0 +1,142 @@
+Total of 140 entries in map
+
+ GA.                                    GPS tag version                   GPSVersionID     0    0.H                 BYTE        4
+ GA.                            North or South Latitude                 GPSLatitudeRef     1    1.H                ASCII        2
+ GA.                                           Latitude                       Latitude     2    2.H             RATIONAL        3
+ GA.                             East or West Longitude                GPSLongitudeRef     3    3.H                ASCII        2
+ GA.                                          Longitude                      Longitude     4    4.H             RATIONAL        3
+ GA.                                 Altitude Reference                 GPSAltitudeRef     5    5.H                 BYTE        1
+ GA.                                           Altitude                    GPSAltitude     6    6.H             RATIONAL        1
+ GA.                            GPS time (atomic clock)                   GPSTimeStamp     7    7.H             RATIONAL        1
+ GA.                GPS satellites used for measurement                  GPSSatellites     8    8.H                ASCII      Any
+ GA.                                GPS receiver status                      GPSStatus     9    9.H                ASCII        2
+ GA.                               GPS measurement mode                 GPSMeasureMode    10    A.H                ASCII        2
+ GA.                              Measurement precision                         GPSDOP    11    B.H             RATIONAL        1
+ GA.                                         Speed unit                    GPSSpeedRef    12    C.H                ASCII        2
+ GA.                              Speed of GPS receiver                       GPSSpeed    13    D.H             RATIONAL        1
+ GA.                Reference for direction of movement                    GPSTrackRef    14    E.H                ASCII        2
+ GA.                              Direction of movement                       GPSTrack    15    F.H             RATIONAL        1
+ GA.                   Reference for direction of image             GPSImgDirectionRef    16   10.H                ASCII        2
+ GA.                                 Direction of image                GPSImgDirection    17   11.H             RATIONAL        1
+ GA.                          Geodetic survey data used                    GPSMapDatum    18   12.H                ASCII      Any
+ GA.              Reference for latitude of destination             GPSDestLatitudeRef    19   13.H                ASCII        2
+ GA.                            Latitude of destination                GPSDestLatitude    20   14.H             RATIONAL        3
+ GA.             Reference for Longitude of destination            GPSDestLongitudeRef    21   15.H                ASCII        2
+ GA.                           Longitude of destination               GPSDestLongitude    22   16.H             RATIONAL        3
+ GA.               Reference for bearing of destination              GPSDestBearingRef    23   17.H                ASCII        2
+ GA.                             Bearing of destination                 GPSDestBearing    24   18.H             RATIONAL        1
+ GA.              Reference for distance to destination             GPSDestDistanceRef    25   19.H                ASCII        2
+ GA.                            Distance to destination                GPSDestDistance    26   1A.H             RATIONAL        1
+ GA.                      Name of GPS processing method           GPSProccessingMethod    27   1B.H            UNDEFINED      Any
+ GA.                                   Name of GPS area             GPSAreaInformation    28   1C.H            UNDEFINED      Any
+ GA.                                           GPS date                   GPSDateStamp    29   1D.H                ASCII       11
+ GA.                        GPS differential correction                GPSDifferential    30   1E.H                SHORT        1
+ GA.                       Horizontal positioning error           GPSHPositioningError    31   1F.H             RATIONAL        1
+  A.                                        Image width                     ImageWidth   256  100.H        SHORT or LONG        1
+  A.                                       Image height                    ImageLength   257  101.H        SHORT or LONG        1
+  A.                       Number of bits per component                  BitsPerSample   258  102.H                SHORT        3
+  A.                                 Compression Scheme                    Compression   259  103.H                SHORT        1
+  A.                                  Pixel Composition      PhotometricInterpretation   262  106.H                SHORT        1
+  D.                                        Image title               ImageDescription   270  10E.H                ASCII      Any
+  D.                 Image input equipment manufacturer                           Make   271  10F.H                ASCII      Any
+  D.                        Image input equipment model                          Model   272  110.H                ASCII      Any
+  B.                                Image data location                   StripOffsets   273  111.H        SHORT or LONG        S
+  A.                               Orientation of Image                    Orientation   274  112.H                SHORT        1
+  A.                               Number of Components                SamplesPerPixel   277  115.H                SHORT        1
+  B.                           Number of rows per strip                   RowsPerStrip   278  116.H        SHORT or LONG        1
+  B.                         Bytes per compressed strip                StripByteCounts   279  117.H        SHORT or LONG        S
+  A.                Image resolution in width direction                    XResolution   282  11A.H             RATIONAL        1
+  A.               Image resolution in height direction                    YResolution   283  11B.H             RATIONAL        1
+  A.                             Image data arrangement            PlanarConfiguration   284  11C.H                SHORT        1
+  A.                         Unit of X and Y resolution                 ResolutionUnit   296  128.H                SHORT        1
+  C.                                  Transfer Function               TransferFunction   301  12D.H                SHORT  3 * 256
+  D.                                      Software used                       Software   305  131.H                ASCII      Any
+  D.                          File change date and time                       DateTime   306  132.H                ASCII       20
+  D.                       Person who created the image                         Artist   315  13B.H                ASCII      Any
+  C.                           White point chromaticity               TransferFunction   318  13E.H             RATIONAL        2
+  C.                          Chromaticity of primaries          PrimaryChromaticities   319  13F.H             RATIONAL        6
+  B.                                 Offset to JPEG SOI          JPEGInterchangeFormat   513  201.H                 LONG        1
+  B.                                 Bytes of JPEG data    JPEGInterchangeFormatLength   514  202.H                 LONG        1
+  C.     Color space transformation matrix coefficients              YCbCrCoefficients   529  211.H             RATIONAL        3
+  A.                        Subsampling ratio of Y to C               YCbCrSubSampling   530  212.H                SHORT        2
+  A.                                Y and C positioning               YCbCrPositioning   531  213.H                SHORT        1
+  C.           Pair of black and white reference values            ReferenceBlackWhite   532  214.H             RATIONAL        2
+  D.                                   Copyright holder                      Copyright 33432 8298.H                ASCII      Any
+ EG.                                      Exposure Time                   ExposureTime 33434 829A.H             RATIONAL        1
+ EG.                                           F number                        FNumber 33437 829D.H             RATIONAL        1
+ EG.                                   Exposure Program                ExposureProgram 34850 8822.H                SHORT        1
+ EG.                               Spectral Sensitivity            SpectralSensitivity 34852 8824.H                ASCII      Any
+ EG.                           Photographic Sensitivity        PhotographicSensitivity 34855 8827.H                SHORT      Any
+ EG.                      Optoeletric conversion factor                           OECF 34856 8828.H            UNDEFINED      Any
+ EG.                                   Sensitivity Type                SensitivityType 34864 8830.H                SHORT        1
+ EG.                        Standard Output Sensitivity      StandardOutputSensitivity 34865 8831.H                 LONG        1
+ EG.                         Recommended Exposure Index     Recommended Exposure Index 34866 8832.H                 LONG        1
+ EG.                                          ISO Speed                       ISOSpeed 34867 8833.H                 LONG        1
+ EG.                             ISO Speed Latitude yyy            ISOSpeedLatitudeyyy 34868 8834.H                 LONG        1
+ EG.                             ISO Speed Latitude zzz            ISOSpeedLatitudezzz 34869 8835.H                 LONG        1
+ EA.                                       Exif version                    ExifVersion 36864 9000.H            UNDEFINED        4
+ EF.          Date and time of original data generation               DateTimeOriginal 36867 9003.H                ASCII       20
+ EF.           Date and time of digital data generation              DateTimeDigitized 36868 9004.H                ASCII       20
+ EF.                            Offset data of DateTime                     OffsetTime 36880 9010.H                ASCII        7
+ EF.                    Offset data of DateTimeOriginal             OffsetTimeOriginal 36881 9011.H                ASCII        7
+ EF.                   Offset data of DateTimeDigitized            OffsetTimeDigitized 36882 9012.H                ASCII        7
+ EC.                          Meaning of each component        ComponentsConfiguration 37121 9101.H            UNDEFINED        4
+ EC.                             Image compression mode         CompressedBitsPerPixel 37122 9102.H             RATIONAL        1
+ EG.                                      Shutter Speed              ShutterSpeedValue 37377 9201.H            SRATIONAL        1
+ EG.                                           Aperture                  ApertureValue 37378 9202.H             RATIONAL        1
+ EG.                                         Brightness                BrightnessValue 37379 9203.H            SRATIONAL        1
+ EG.                                      Exposure Bias              ExposureBiasValue 37380 9204.H            SRATIONAL        1
+ EG.                              Maximum lens aperture               MaxApertureValue 37381 9205.H             RATIONAL        1
+ EG.                                   Subject distance                SubjectDistance 37382 9206.H             RATIONAL        1
+ EG.                                      Metering Mode                   MeteringMode 37383 9207.H                SHORT        1
+ EG.                                       Light source                    LightSource 37384 9208.H                SHORT        1
+ EG.                                              Flash                          Flash 37385 9209.H                SHORT        1
+ EG.                                  Lens focal length                    FocalLength 37386 920A.H                SHORT        1
+ EG.                                       Subject area                    SubjectArea 37396 9214.H                SHORT  2, 3, 4
+ ED.                                 Manufacturer notes                      MakerNote 37500 927C.H            UNDEFINED      Any
+ ED.                                      User comments                   UserCommment 37510 9286.H            UNDEFINED      Any
+ EF.                                DateTime subseconds                     SubSecTime 37520 9290.H                ASCII      Any
+ EF.                        DateTimeOriginal subseconds             SubSecTimeOriginal 37521 9291.H                ASCII      Any
+ EF.                       DateTimeDigitized subseconds            SubSecTimeDigitized 37522 9292.H                ASCII      Any
+EG2.                                        Temperature                    Temperature 37888 9400.H            SRATIONAL        1
+EG2.                                           Humidity                       Humidity 37889 9401.H             RATIONAL        1
+EG2.                                           Pressure                       Pressure 37890 9402.H             RATIONAL        1
+EG2.                                         WaterDepth                     WaterDepth 37891 9403.H            SRATIONAL        1
+EG2.                                       Acceleration                   Acceleration 37892 9404.H             RATIONAL        1
+EG2.                             Camera elevation angle           CameraElevationAngle 37893 9405.H            SRATIONAL        1
+ EA.                         Supported Flashpix version                FlashpixVersion 40960 A000.H            UNDEFINED        4
+ EB.                            Color space information                     ColorSpace 40961 A001.H                SHORT        1
+ EC.                                  Valid image width                PixelXDimension 40962 A002.H        SHORT or LONG        1
+ EC.                                 Valid image height                PixelYDimension 40963 A003.H        SHORT or LONG        1
+ EE.                                 Related audio file               RelatedSoundFile 40964 A004.H                ASCII       13
+ EG.                                       Flash Energy                    FlashEnergy 41483 A20B.H             RATIONAL        1
+ EG.                         Spatial frequency response       SpatialFrequencyResponse 41484 A20C.H            UNDEFINED      Any
+ EG.                           Focal plane X resolution          FocalPlaneXResolution 41486 A20E.H             RATIONAL        1
+ EG.                           Focal plane Y resolution          FocalPlaneYResolution 41487 A20F.H             RATIONAL        1
+ EG.                        Focal plane resolution unit       FocalPlaneResolutionUnit 41488 A210.H                SHORT        1
+ EG.                                   Subject location                SubjectLocation 41492 A214.H                SHORT        2
+ EG.                                     Exposure index                  ExposureIndex 41493 A215.H             RATIONAL        1
+ EG.                                     Sensing method                  SensingMethod 41495 A217.H                SHORT        1
+ EG.                                        File source                     FileSource 41728 A300.H            UNDEFINED        1
+ EG.                                         Scene Type                      SceneType 41729 A301.H            UNDEFINED        1
+ EG.                                        CFA pattern                     CFAPattern 41730 A302.H            UNDEFINED      Any
+ EG.                            Custom image processing                 CustomRendered 41985 A401.H                SHORT        1
+ EG.                                      Exposure Mode                   ExposureMode 41986 A402.H                SHORT        1
+ EG.                                      White balance                   WhiteBalance 41987 A403.H                SHORT        1
+ EG.                                 Digital zoom ratio               DigitalZoomRatio 41988 A404.H             RATIONAL        1
+ EG.                          Focal Length in 35mm film            FocalLength35mmFilm 41989 A405.H                SHORT        1
+ EG.                                 Scene capture type               SceneCaptureType 41990 A406.H                SHORT        1
+ EG.                                       Gain control                    GainControl 41991 A407.H             RATIONAL        1
+ EG.                                           Contrast                       Contrast 41992 A408.H                SHORT        1
+ EG.                                         Saturation                     Saturation 41993 A409.H                SHORT        1
+ EG.                                          Sharpness                      Sharpness 41994 A40A.H                SHORT        1
+ EG.                        Device settings Description       DeviceSettingDescription 41995 A40B.H            UNDEFINED      Any
+ EG.                             Subject distance range           SubjectDistanceRange 41996 A40C.H                SHORT        1
+ EH.                                    Unique image ID                  ImageUniqueID 42016 A420.H                ASCII       33
+ EH.                                  Camera Owner Name                CameraOwnerName 42032 A430.H                ASCII      Any
+ EH.                                 Body Serial Number               BodySerialNumber 42033 A431.H                ASCII      Any
+ EH.                                 Lens Specification              LensSpecification 42034 A432.H             RATIONAL        4
+ EH.                                          Lens Make                       LensMake 42035 A433.H                ASCII      Any
+ EH.                                         Lens Model                      LensModel 42036 A434.H                ASCII      Any
+ EH.                                 Lens Serial Number               LensSerialNumber 42037 A435.H                ASCII      Any
+ EB.                                              Gamma                          Gamma 42240 A500.H             RATIONAL        1
