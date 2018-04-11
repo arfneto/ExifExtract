@@ -26,9 +26,11 @@ struct IFDentry
 	uint16_t	type;
 	uint32_t	count;
 	uint32_t	offset;
+
+	char *		value;
 };
 
-class IFD
+class IFDlog
 {
 private:
 	uint16_t			entries;

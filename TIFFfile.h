@@ -18,13 +18,6 @@ using namespace std;
 
 #define		__BUFFER0JPEG__		65536
 
-struct fileHeader
-{
-	uint16_t	byteOrder;
-	uint16_t	tiffID;
-	uint32_t	offset;
-};
-
 struct fileLog
 {
 	string		header;
@@ -91,7 +84,7 @@ public:
 	void logThis(fileLog l, string comment);
 
 	void processField(
-		IFDfield,
+		IFDentry *,
 		uint32_t,
 		uint32_t,
 		uint16_t,
@@ -150,5 +143,6 @@ private:
 	uint64_t		b64{};
 
 	bool			lsbFirst;
+
 };
 

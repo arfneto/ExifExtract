@@ -8,14 +8,14 @@
 #include <cstdint>
 #include <string>
 #include <memory>
+#include "IFD.h"
+#include "TagMeans.h"
+
 using namespace std;
 
 struct IFDfield
 {
-	uint16_t	tag;
-	uint16_t	type;
-	uint32_t	count;
-	uint32_t	offset;
+	IFDentry	field;
 	IFDfield *	nextField;
 };
 
@@ -41,6 +41,7 @@ public:
 	short		ifdCount;
 	uint32_t	offsetBase;
 	IFD *		lastIFD;
+	TagMeans	exifTags;
 
 	IFDlist();
 	~IFDlist();

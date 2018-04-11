@@ -149,14 +149,15 @@ void TIFFfile::dumpFrom(
 bool TIFFfile::dumpTags(const string fileName)
 {
 	fstream	out;
-	TagMeans		tagDict;	// book of tags
+	TagMeans &		tagDict = ifdSet.exifTags;	// book of tags
 	FieldDict		field;		// local field
+	char *			pChar;
 
 	out.open(fileName);
 	if (!out.is_open())
 	{
 		printf("\tdumpTabs(): error creating '%s'\n", fileName.c_str());
-		return false;
+		//return false;
 	}
 
 	if (!isLoaded)
@@ -179,6 +180,7 @@ bool TIFFfile::dumpTags(const string fileName)
 		);
 		pIFD = pIFD->nextIFD;
 	};
+
 	// point to IFD0, list all tags
 	pIFD = ifdSet.ifd;
 	for (int n = 0; n < ifdSet.ifdCount; n++)
@@ -193,21 +195,22 @@ bool TIFFfile::dumpTags(const string fileName)
 		IFDfield * p = pIFD->fieldList; // 1st field
 		for (int f = 1; f <= pIFD->entries; f++)
 		{
-			if (tagDict.explainTag(p->tag, field))
+			if (tagDict.explainTag(p->field.tag, field))
 			{
+				pChar = p->field.value;
 				printf(
-					// _tagName _fieldName offset (offset) value
-					"\t%3d: %s %s 0x%X (%d) []\n",
+					"\t%3d: %s %s 0x%X (%d) =[%s]\n",
 					f,
 					field._hexID.c_str(),
 					field._tagName.c_str(),
-					p->offset,
-					p->offset
+					p->field.offset,
+					p->field.offset,
+					pChar
 				);
 			}
 			else
 			{
-				printf("\t%3d: ***** tag 0x%X (%d) not in book...\n", f, p->tag, p->tag);
+				printf("\t%3d: ***** tag 0x%X (%d) not in book...\n", f, p->field.tag, p->field.tag);
 			}
 			p = p->nextField;
 		}	// end for f
@@ -218,6 +221,8 @@ bool TIFFfile::dumpTags(const string fileName)
 
 void TIFFfile::dumpIFDset(IFDlist * l)
 {
+	uint32_t		base{};	// to compute field addresses
+
 	printf("************************************************************\n");
 	if (l->ifd == nullptr )
 	{
@@ -247,25 +252,23 @@ void TIFFfile::dumpIFDset(IFDlist * l)
 		if ( (*head).processed)
 		{
 			printf(
-				"\n\tIFD%d (PROCESSED):\n\n\tIndex %d, %d field (s), address is [0x%X]. Next is [0x%X] disk [0x%X]\n",
+				"\n\tIFD%d (PROCESSED):\n\n\tIndex %d, %d field (s), disk address is [0x%X]. Next is [0x%X]\n",
 				(*head).index,
 				(*head).index,
 				(*head).entries,
 				(*head).address,
-				(*head).nextIFDoffset,
-				(*head).nextIFDoffset + ifdSet.offsetBase
+				(*head).nextIFDoffset
 			);
 		}
 		else
 		{
 			printf(
-				"\n\tIFD%d (NOT PROCESSED):\n\n\tIndex %d, %d field (s), address is [0x%X]. Next is [0x%X] disk [0x%X]\n",
+				"\n\tIFD%d (NOT PROCESSED):\n\n\tIndex %d, %d field (s), disk address is [0x%X]. Next is [0x%X]\n",
 				(*head).index,
 				(*head).index,
 				(*head).entries,
 				(*head).address,
-				(*head).nextIFDoffset,
-				(*head).nextIFDoffset + ifdSet.offsetBase
+				(*head).nextIFDoffset
 			);
 
 		}
@@ -277,6 +280,7 @@ void TIFFfile::dumpIFDset(IFDlist * l)
 		else
 		{
 			field = (*head).fieldList;
+			base = (*head).address + 2;
 			for (
 				int f = 1;
 				f <= (*head).entries;
@@ -284,14 +288,16 @@ void TIFFfile::dumpIFDset(IFDlist * l)
 			{
 				// list a field
 				printf(
-					"\t[%4d/%4d]:\ttag 0x%X,\ttype 0x%X,\tcount 0x%X,\toffset 0x%X\n",
+					"\t[%4d/%4d]:\ttag 0x%X,\ttype 0x%X,\tcount 0x%X,\toffset 0x%8X\t@0x%X\n",
 					f,
 					(*head).entries,
-					field->tag,
-					field->type,
-					field->count,
-					field->offset
+					field->field.tag,
+					field->field.type,
+					field->field.count,
+					field->field.offset,
+					base
 				);
+				base += 12;	// 12 bytes field
 				field = field->nextField;
 			};
 			head = (*head).nextIFD;
@@ -561,7 +567,7 @@ void TIFFfile::fileLoad()
 			if (currentIFD->origin == 0xA005)
 			{
 				sprintf_s(sMsg, "st 6 @ 0x%X", next);
-				logThis({ sMsg, 0, 0, "0xA005 InterOp IFD" }, "");
+				logThis({ sMsg, 0, 0, "0xA005 InterOp IFD" }, "A005");
 				next -= 1;
 				st = 7;
 				break;
@@ -643,7 +649,7 @@ void TIFFfile::fileLoad()
 			do
 			{
 				processField(
-					*pField,
+					&(*pField).field,
 					ifdSet.offsetBase,
 					next - 12,
 					n,
@@ -680,6 +686,8 @@ void TIFFfile::fileLoad()
 
 		case 15:
 			isLoaded = true;
+			// test
+			return;
 			break;
 
 		default:
@@ -778,15 +786,23 @@ void TIFFfile::logThis(fileLog l, string comment)
 }
 
 void TIFFfile::processField(
-	 IFDfield field,
-	 uint32_t globalOffset,
-	 uint32_t address,
-	 uint16_t n,
-	 uint16_t t ) 
+	 IFDentry *		f,
+	 uint32_t		globalOffset,
+	 uint32_t		address,
+	 uint16_t		pos,
+	 uint16_t		t
+) 
 {
 	char *		pField;
 	char		sMsg[80];
 	char		sValue[80];
+	char *		pBase;
+	char *		pRational;
+	char *		pTempChar;
+	int			n{};
+	int			size;
+	int			slonga{ 0 };
+	int			slongb{ 0 };
 	string		s;
 	uint16_t	n16{};
 	uint32_t	n32a{};
@@ -795,22 +811,23 @@ void TIFFfile::processField(
 	IFD	*		pIFD;
 
 	sprintf_s(
-		sMsg, "Field %d of %d at address 0x%X, offset 0x%X", n, t, address, globalOffset
+		sMsg,
+		"\tProcessField %d of %d: @0x%X, offset 0x%X",
+		pos, t, 
+		address, globalOffset
 	);
 	sprintf_s(
-		sMsg, "%04X", field.tag
+		sMsg, "%04X", f->tag
 	);
 	sprintf_s(
 		sValue,
 		"[%X] type: [%X] count: [%X], offset: [%X]\t(%d of %d)",
-		field.tag,
-		field.type,
-		field.count,
-		field.offset,
-		n, t
+		f->tag,		f->type,
+		f->count,	f->offset,
+		pos, t
 		);
 	s = sValue;
-	//logThis({ sMsg, 0, 0, sValue }, "");
+	//logThis({ sMsg, 0, 0, sValue }, "processField ==>");
 
 	// field types are
 	// 1 - byte 8 bit unsigned
@@ -826,236 +843,553 @@ void TIFFfile::processField(
 	// 11- float 4 bytes
 	// 12- float 8 bytes
 
-	switch (field.type)
+	switch (f->type)
 	{
 	case 1:
-		// BYTE 8-bit unsigned
-		pField = new char[field.count];
-		// if we have no more than 4 bytes, content is written inline
-		if (field.count <= 4)
+		//	TYPE 1 is BYTE
+		//
+		// value line is "(BYTE[n] = 1 2 ... n)"
+		//
+		sprintf_s(sMsg, "%4X", f->tag);
+		//
+		// special case: if f->tag is 0x00 it is the GPS info tag
+		//
+		if (f->tag == 0x0)	// TAG 0 is GPS Version Tag
 		{
-			memcpy(pField, &field.offset, 4);
+			pBase = (char *)& f->offset;
+			sprintf_s(sValue, "GPSInfo tag is \"%c.%c.%c.%c\"",
+				(char)(*(pBase + 0) + 48),
+				(char)(*(pBase + 1) + 48),
+				(char)(*(pBase + 2) + 48),
+				(char)(*(pBase + 3) + 48)
+			);
+			logThis({ sMsg, 0, 0, sValue }, "");
+			//
+			pField = new(char[strlen(sValue) + 1]);
+			strcpy_s(pField, strlen(sValue) + 1, sValue);
+			f->value = pField;
+			break;
+		}
+		//
+		// value line is "(BYTE[n] = 1 2 ... n)"
+		//
+		sprintf_s( sValue, "(BYTE[%d] = ", f->count );
+		n = f->count;
+		if (n <= 4)
+		{
+			// count <= 4: up to 4 bytes inline in f->offset
+			pBase = (char *) & f->offset;
 		}
 		else
 		{
-			// or we have then at the offset
-			for (unsigned int i = 0; i < field.count; i++)
-			{
-				*(pField + i) = *(buffer + globalOffset + field.offset + i);
-			}
-			updateHighestOffset(globalOffset + field.offset + field.count - 1);
+			// count > 4: bytes are pointed by f->offset
+			// for safety, we will show just the first 8 ones
+			n = (n > 8) ? 8 : n;
+			pBase = (char *)(buffer + globalOffset + f->offset);
+			updateHighestOffset(globalOffset + f->offset + f->count - 1);
 		}
-		s = sValue;
-		if (field.tag == 0x0)	// TAG 0 is GPS Version Tag
+		for (int i = 0; i < n; i++)
 		{
-			sprintf_s(sValue, "GPSInfo tag is [%c.%c.%c.%c]",
-				(char)(*(pField + 0) + 48),
-				(char)(*(pField + 1) + 48),
-				(char)(*(pField + 2) + 48),
-				(char)(*(pField + 3) + 48)
+			sprintf_s(
+				sValue,
+				"%s 0x%X (%d)",
+				sValue,
+				(int) pBase,
+				(int) pBase
 			);
-			logThis({ sMsg, 0, 0, sValue }, "GPSInfo tag");
+			pBase++;
 		}
-		updateHighestOffset(globalOffset + field.offset + field.count - 1);
-		delete pField;
+		// close value string
+		sprintf_s(sValue,"%s)", sValue );
+		pField = new(char[strlen(sValue) + 1]);
+		strcpy_s(pField, strlen(sValue) + 1, sValue);
+		f->value = pField;
 		break;
-
+	
 	case 2:
 		// ASCII
-		pField = new char[field.count];
-		// if we have no more than 4 bytes, content is written inline
-		if (field.count <= 4)
+		//
+		// value line is "(ASCII[n] = "..."
+		//
+		n = f->count;
+		sprintf_s(sValue, "(ASCII[%d] = ", n);
+		//
+		if (n <= 4)
 		{
-			memcpy(pField, &field.offset, 4);
-			*(pField + 4) = 0;
+			// count <= 4: up to 4 bytes inline in f->offset
+			pBase = (char *) & f->offset;
 		}
 		else
 		{
-			for (unsigned int i = 0; i < field.count; i++)
+			// count > 4: bytes are pointed by f->offset
+			// for safety, we will show just the first 8 ones
+			pBase = (char *)(buffer + globalOffset + f->offset);
+			if (f->tag == 0xA420)
 			{
-				*(pField + i) = *(buffer + globalOffset + field.offset + i);
+				// ImageUniqueID seems to have a padding byte
+				updateHighestOffset(globalOffset + f->offset + f->count);
 			}
-			updateHighestOffset(globalOffset + field.offset + field.count - 1);
-		}
-		sprintf_s(sValue, "[ASCII], value is [%s]", pField);
-		s = sValue;
-		if (field.tag == 0xA420)	// ImageUniqueID seems to have a padding byte
-		{
-			field.count = field.count + 1;
-			//printf("\t0xA420: Extra byte included after image id\n");
-		}
-		else
-		{
-			if (field.tag == 0x1)
+			else
 			{
-				// TAG 1 is GPSLatitudeRef
-				printf(
-					"\tGPS Latitude Reference is %s\n",
-					sValue
-				);
+				updateHighestOffset(globalOffset + f->offset + f->count - 1);
 			}
 		}
-
-
-		delete pField;
+		memcpy_s(
+			sMsg, 80,
+			pBase,
+			n
+		);
+		sprintf_s(
+			sValue,
+			"%s\"%s\")",
+			sValue,
+			sMsg
+		);
+		pField = new(char[strlen(sValue) + 1]);
+		strcpy_s(pField, strlen(sValue) + 1, sValue);
+		f->value = pField;
+		n16 = 0;	// dummy break point
 		break;
 
 	case 3:
 		// unsigned short, 2 bytes
-		n16 = field.offset;
-		sprintf_s(sValue, "type 3 (unsigned short), value is %d [0x%X]", n16, n16);
-		logThis( { sMsg, 0, 0, sValue }, "");
+		//
+		// value line is "(SHORT[n] = "1 2 ... n""
+		//
+		n = f->count;
+		sprintf_s(sValue, "(SHORT[%d] = ", n);
+		//
+		if (n <= 4)
+		{
+			// count <= 4: up to 4 bytes inline in f->offset
+			pBase = (char *)& f->offset;
+		}
+		else
+		{
+			// count > 4: bytes are pointed by f->offset
+			pBase = (char *)(buffer + globalOffset + f->offset);
+			// each field uses 2 bytes
+			updateHighestOffset(globalOffset + f->offset + (2 * f->count) - 1);
+			// now cut to the first 8 items
+			n = (n > 8) ? 8 : n;
+		}
+		// now loop thru the items
+		for (int i = 0; i < n; i++)
+		{
+			memcpy_s(&b16, 2, pBase, 2);
+			sprintf_s(
+				sValue,
+				"%s0x%X (%d)",
+				sValue,
+				b16,
+				b16
+			);
+			pBase += 2;
+		}
+		sprintf_s(sValue, "%s)", sValue);	// closes the string
+		logThis({ sMsg, 0, 0, sValue }, "");
+		//
+		pField = new(char[strlen(sValue) + 1]);
+		strcpy_s(pField, strlen(sValue) + 1, sValue);
+		f->value = pField;
+		n16 = 0;	// dummy break point
 		break;
 
 	case 4:
 		// LONG
-		sprintf_s(sValue,
-			"TAG %X type 4 (unsigned long), value is %d [0x%X]",
-			field.tag,
-			field.offset,
-			field.offset
-		);
-		logThis({ sMsg, 0, 0, sValue },	"");
-		if (field.tag == 0x8769)	// Exif IFD
+		//
+		// value line is "(LONG[n] = "1 2 ... n""
+		//
+		n = f->count;
+		sprintf_s(sValue, "(LONG[%d] = ", n);
+		//
+		if (n == 1)
 		{
-			//dumpFrom("Start of Exif IFD", 40, buffer + field.offset + globalOffset);
+			pBase = (char *)& f->offset;
+		}
+		else
+		{
+			// count > 1: bytes are pointed by f->offset
+			pBase = (char *)(buffer + globalOffset + f->offset);
+			// each field uses 4 bytes
+			updateHighestOffset(globalOffset + f->offset + (4 * f->count) - 1);
+			// now cut to the first 8 items
+			n = (n > 8) ? 8 : n;
+		}
+		// now loop thru the items
+		for (int i = 0; i < n; i++)
+		{
+			memcpy_s(&b32, 4, pBase, 4);
+			sprintf_s(
+				sValue,
+				"%s0x%X (%d)",
+				sValue,
+				b32,
+				b32
+			);
+			pBase += 4;
+		}
+		sprintf_s(sValue, "%s)", sValue);	// closes the string
+		logThis({ sMsg, 0, 0, sValue }, "");
+		//
+		pField = new(char[strlen(sValue) + 1]);
+		strcpy_s(pField, strlen(sValue) + 1, sValue);
+		f->value = pField;
+		//
+		if (f->tag == 0x8769)	// Exif IFD
+		{
+			//dumpFrom("Start of Exif IFD", 40, buffer + f->offset + globalOffset);
 			sprintf_s(
 				sValue,
 				"TAG %X Exif IFD. offset is 0x%X. Address in disk is 0x%X",
-				field.tag,
-				field.offset,
-				field.offset + globalOffset
+				f->tag,
+				f->offset,
+				f->offset + globalOffset
 			);
-			logThis({ sMsg, 0, 0, sValue },	"8769");
+			logThis({ sMsg, 0, 0, sValue }, "8769");
+			// update value on f->value;
+			delete pField;
+			size = strlen(sValue) + 1;
+			pField = new(char[size]);
+			sprintf_s(
+				pField, size,
+				"Exif IFD. offset is 0x%X. Address in disk is 0x%X",
+				f->offset,
+				f->offset + globalOffset
+			);
+			f->value = pField;
+			//
 			// set up a new IFD to run this
-			pIFD = getNewIFD(&ifdSet, field.offset);
+			pIFD = getNewIFD(&ifdSet, f->offset);
 			pIFD->origin = 0x8769; // sign to not search for next in IFD chain
 		}
 		else
 		{
-			if (field.tag == 0xA005)	// Interoperability IFD
+			if (f->tag == 0xA005)	// Interoperability IFD
 			{
 				sprintf_s(
 					sValue,
-					"TAG %X Interop IFD. offset is 0x%X. Address in disk is 0x%X",
-					field.tag,
-					field.offset,
-					field.offset + globalOffset
+					"Exif Interoperability IFD. offset is 0x%X. Address in disk is 0x%X",
+					f->offset,
+					f->offset + globalOffset
 				);
-				logThis({ sMsg, 0, 0, sValue },	"");
-				// this is all for now //test//
-				//pIFD = getNewIFD(&ifdSet, field.offset);
-				//pIFD->origin = 0xA005; // sign to not search for next in IFD chain
+				logThis({ sMsg, 0, 0, sValue }, "");
+				// update value on f->value;
+				delete pField;
+				size = strlen(sValue) + 1;
+				pField = new(char[size]);
+				sprintf_s(
+					pField, size,
+					"Exif Interoperability IFD. offset is 0x%X. Address in disk is 0x%X",
+					f->offset,
+					f->offset + globalOffset
+				);
+				f->value = pField;
+				//
+				pIFD = getNewIFD(&ifdSet, f->offset);
+				pIFD->origin = 0xA005; // sign to not search for next in IFD chain
 			}
 			else
 			{
-				if (field.tag == 0x8825)	// Interoperability IFD
+				if (f->tag == 0x8825)	// Interoperability IFD
 				{
-					//dumpFrom("Start of GPS IFD", 40, buffer + field.offset + globalOffset);
+					//dumpFrom("Start of GPS IFD", 40, buffer + f->offset + globalOffset);
 					sprintf_s(
 						sValue,
 						"TAG %X GPS IFD. offset is 0x%X. Address in disk is 0x%X",
-						field.tag,
-						field.offset,
-						field.offset + globalOffset
+						f->tag,
+						f->offset,
+						f->offset + globalOffset
 					);
 					logThis({ sMsg, 0, 0, sValue }, "8825");
+					// update value on f->value;
+					delete pField;
+					size = strlen(sValue) + 1;
+					pField = new(char[size]);
+					sprintf_s(
+						pField, size,
+						"GPS Info IFD. offset is 0x%X. Address in disk is 0x%X",
+						f->offset,
+						f->offset + globalOffset
+					);
+					f->value = pField;
+					//
 					// this is all for now
-					pIFD = getNewIFD(&ifdSet, field.offset);
+					pIFD = getNewIFD(&ifdSet, f->offset);
 					pIFD->origin = 0x8825; // sign to not search for next in IFD chain
 				}
 			}
 		}
+		n16 = 0;	// dummy break point;
 		break;
 
 	case 5:
-		// rational: A/B/C...
-		sprintf_s(
-			sValue, "Type 5, count is %d (0x%x)",
-			field.count,
-			field.count
-		);
-		for (unsigned int i = 0; i < field.count; i++)
+		//
+		// 5: rational: A/B/C...
+		//
+		// each rational uses 2 4-byte longs where the first one is the numerator
+		// and the second one is the denominator
+		//
+		// Value string is "(RATIONAL[n] [A1/A2] [B1/B2]...)" no hex values this time
+		//
+		n = f->count;
+		size = 30 * n + 50;
+		pRational = (char *)::operator new(size); // 30 bytes for each [A/B] pair
+		sprintf_s(	pRational, size, "(RATIONAL)[%d]: ", n);
+		pBase = (char *)(buffer + globalOffset + f->offset);	// pointing to start
+		for (int i = 0; i < n; i++)
 		{
-			memcpy(&n32a, buffer + globalOffset + field.offset + 4*i, 4);
-			sprintf_s(
-				sValue,
-				"%s %c = 0x%X (%d) ",
-				sValue,
-				(char)(65+i),
-				n32a,
-				n32a
+			// build one pair in sRational
+			memcpy_s(&n32a, 4, pBase, 4);
+			pBase += 4;
+			memcpy_s(&n32b, 4, pBase, 4);
+			pBase += 4;
+			sprintf_s(pRational, size,
+				"%s[%d / %d]",
+				pRational, 
+				n32a, n32b
 			);
 		}
-		updateHighestOffset(globalOffset + field.offset + (4*field.count) - 1);
-		logThis({ sMsg, (globalOffset + field.offset), 8, sValue },	"");
+		sprintf_s(pRational, size, "%s)", pRational);
+		pField = pRational;
+		f->value = pField;
+		sprintf_s(sMsg, 80, "%04X", f->tag);
+		logThis({ sMsg, (globalOffset + f->offset), (f->count*8), sValue }, "");
+		updateHighestOffset(globalOffset + f->offset + (8 * f->count) - 1);
+		n16 = 0;	// dummy break point
 		break;
 
 	case 7:
 		// undefined
-		switch (field.tag)
+		//
+		// this is where we need to look into the tag code first
+		//	it is defined by the tag code :)
+		//
+		sprintf_s(sMsg, 80, "%04X", f->tag);
+		switch (f->tag)
 		{
 		case 0x0002:
-			memcpy(sValue, &field.offset, 4);
-			sValue[4] = 0;
+			// THIS can take 3 values an of Exif version 3.1> R98, R03 or THM
+			// value line will be ""Exif Interoperability version is CCC"
+			pBase = (char *) & f->offset;
 			sprintf_s(
-				sValue,
-				"Exif Interoperability version is %c%c.%c%c",
-				sValue[0], sValue[1], sValue[2], sValue[3]
+				sValue, 80,
+				"Exif Interoperability version is \"%c%c%c\"",
+				(int) *pBase, (int)*(pBase + 1), (int)*(pBase + 2)
 			);
-			logThis({ sMsg, 0, 0, sValue }, ""	);
+			//
+			pField = new(char[strlen(sValue) + 1]);
+			strcpy_s(pField, strlen(sValue) + 1, sValue);
+			f->value = pField;
+			//
+			logThis({ sMsg, 0, 0, sValue }, "");
+			break;
+
+		case 0x1B:
+			// This the GPSProcessingMethod
+			//
+			// The first 8 bytes indicates the character code used
+			// so this field can not be recorded inline using the offset
+			// 4-bytes
+			//
+			// the value line will be "GPSProcessingMethod[n] (code) = "value"
+			//
+			// if the character code is not ASCII value will be "???"
+			//
+			n = f->count;	// anyway n>9 bytes
+			updateHighestOffset(globalOffset + f->offset + f->count - 1);
+			size = 80 + n;
+			pField = (char *)::operator new(size);
+			pTempChar = (char *)::operator new(size);
+			pBase = (char *)(buffer + globalOffset + f->offset);
+			memcpy_s(sValue, 80, pBase, 8);
+			printf("\tsValue = [%s]\n", sValue);
+			if ((*pBase) != 65)
+			{
+				sprintf_s(
+					pField, size,
+					"GPSProcessingMethod[%d]: (%s) = \"???\"",
+					n, sValue
+				);
+			}
+			else
+			{ 
+				// ok is ASCII
+				pBase += 8;
+				memcpy_s(pTempChar, size, pBase, (n - 8));
+				*(pTempChar + n - 8) = 0;
+				sprintf_s(
+					pField, size,
+					"GPSProcessingMethod[%d] (%s) = \"%s\"",
+					n, sValue, pTempChar
+				);
+			}
+			f->value = pField;
+			n16 = 0;	// dummy break point
+			delete pTempChar;
 			break;
 
 		case 0x9000:
-			memcpy(sValue, &field.offset, 4);
-			sValue[4] = 0;
+			// 
+			// value line will be ""Exif version is CCCC"
+			// sure, version should be 231
+			//
+			pBase = (char *)& f->offset;
 			sprintf_s(
 				sValue,
-				"Exif version is %c%c.%c%c",
-				sValue[0], sValue[1], sValue[2], sValue[3]
+				"Exif version is \"%c%c.%c%c\"",
+				(char)*pBase,
+				(char)*(pBase + 1),
+				(char)*(pBase + 2),
+				(char)*(pBase + 3)
 			);
+			//
+			pField = new(char[strlen(sValue) + 1]);
+			strcpy_s(pField, strlen(sValue) + 1, sValue);
+			f->value = pField;
+			//
+			sprintf_s(sMsg, 80, "%04X", f->tag);
 			logThis({ sMsg, 0, 0, sValue }, "");
 			break;
 
 		case 0x9101:
-			memcpy(sValue, &field.offset, 4);
-			sValue[4] = 0;
+			// 
+			// value line will be "4560" if RGB uncompressed
+			// or other values for each channel
+			//
+			// output value line: "Components Configuration = [0xn1 0xn2 0xn3]
+			pBase = (char *)& f->offset;
 			sprintf_s(
 				sValue,
-				"Components Configuration [%c%c%c%c]",
-				sValue[0], sValue[1], sValue[2], sValue[3]
+				"Components Configuration = [0x%X 0x%X 0x%X]",
+				(int)*pBase, (int)*(pBase + 1), (int)*(pBase + 2)
 			);
+			//
+			pField = new(char[strlen(sValue) + 1]);
+			strcpy_s(pField, strlen(sValue) + 1, sValue);
+			f->value = pField;
+			//
 			logThis({ sMsg, 0, 0, sValue }, "");
 			break;
 
 		case 0xA000:
-			memcpy(sValue, &field.offset, 4);
-			sValue[4] = 0;
+			// 
+			// value line will be Flashpix Version
+			//
+			// output value line: "Flashpix Version = [VVVV]
+			pBase = (char *)& f->offset;
 			sprintf_s(
 				sValue,
-				"FlashPix Version [%c%c.%c%c]",
-				sValue[0], sValue[1], sValue[2], sValue[3]
+				"Flashpix Version = [%c%c.%c%c]",
+				(int)*pBase, (int)*(pBase + 1), (int)*(pBase + 2), (int)*(pBase+3)
 			);
+			//
+			pField = new(char[strlen(sValue) + 1]);
+			strcpy_s(pField, strlen(sValue) + 1, sValue);
+			f->value = pField;
+			//
 			logThis({ sMsg, 0, 0, sValue }, "");
 			break;
 
 		default:
-			logThis( { sMsg, 0, 0, "type is 7, not yet implemented" }, "" );
+			// 
+			// here we have an undefined tag with type also undefined
+			//
+			// output value line: "Tag TTTT Type undefined. Offset is 0xNNN data is A B C D"
+			pBase = (char *)& f->offset;
+			sprintf_s(
+				sValue,
+				"Tag 0x%4X: Type UNDEFINED. Offset is 0x%X data is [%X] [%X] [%X] [%X]",
+				f->tag,
+				f->offset,
+				(int)*pBase, (int)*(pBase + 1), (int)*(pBase + 2), (int)*(pBase + 3)
+			);
+			//
+			pField = new(char[strlen(sValue) + 1]);
+			strcpy_s(pField, strlen(sValue) + 1, sValue);
+			f->value = pField;
+			//
+			logThis({ sMsg, 0, f->count, sValue }, "");
 			break;
+		}	// end switch(f->tag)
+		break;
+
+	case 9:
+		//
+		// 9: SLONG: SIGNED 32bit integer
+		//
+
+		// Value string is "(SLONG[n] A1 A2 ...)" no hex values this time
+		//
+		n = f->count;
+		size = 30 * n + 50;
+		pRational = (char *)::operator new(size); // 30 bytes for each [A/B] pair
+		sprintf_s(pRational, size, "(SLONG)[%d]: ", n);
+		pBase = (char *)(buffer + globalOffset + f->offset);	// pointing to start
+		for (int i = 0; i < n; i++)
+		{
+			// build one
+			memcpy_s(&slonga, 4, pBase, 4);
+			pBase += 4;
+			sprintf_s(pRational, size,
+				"%s[%d]",
+				pRational,
+				slonga
+			);
 		}
+		sprintf_s(pRational, size, "%s)", pRational);
+		pField = pRational;
+		f->value = pField;
+		sprintf_s(sMsg, 80, "%04X", f->tag);
+		logThis({ sMsg, (globalOffset + f->offset), (f->count * 4), sValue }, "");
+		updateHighestOffset(globalOffset + f->offset + (4 * f->count) - 1);
+		n16 = 0;	// dummy break point
 		break;
 
-	default:
-		// tags to be implemented?
-		sprintf_s( sValue,
-			"*** [0x%x], type is [0x%x], count is [0x%x], offset is [0x%x]",
-			field.tag, field.type,
-			field.count, field.offset
-		);
-		logThis({ sMsg, 0, 0, sValue },	"");
+	case 10:
+		//
+		// 10: srational: A/B/C... SIGNED
+		//
+		// each srational uses 2 4-byte signed longs where the first one is the numerator
+		// and the second one is the denominator
+		//
+		// Value string is "(SRATIONAL[n] [A1/A2] [B1/B2]...)" no hex values this time
+		//
+		n = f->count;
+		size = 30 * n + 50;
+		pRational = (char *)::operator new(size); // 30 bytes for each [A/B] pair
+		sprintf_s(pRational, size, "(SRATIONAL)[%d]: ", n);
+		pBase = (char *)(buffer + globalOffset + f->offset);	// pointing to start
+		for (int i = 0; i < n; i++)
+		{
+			// build one pair in sRational
+			memcpy_s(&slonga, 4, pBase, 4);
+			pBase += 4;
+			memcpy_s(&slongb, 4, pBase, 4);
+			pBase += 4;
+			sprintf_s(pRational, size,
+				"%s[%d / %d]",
+				pRational,
+				slonga, slongb
+			);
+		}
+		sprintf_s(pRational, size, "%s)", pRational);
+		pField = pRational;
+		f->value = pField;
+		sprintf_s(sMsg, 80, "%04X", f->tag);
+		logThis({ sMsg, (globalOffset + f->offset), (f->count * 8), sValue }, "");
+		updateHighestOffset(globalOffset + f->offset + (8 * f->count) - 1);
+		n16 = 0;	// dummy break point
 		break;
+
 	}	// end switch
-
+	//
+	//printf("\ttag %X value is [%s]\n",
+	//	f->tag,
+	//	f->value
+	//);
+	n16 = 0; // do nothing
+	return;
 }	// end processField()
 
 uint32_t TIFFfile::processIFD()
@@ -1098,19 +1432,19 @@ uint32_t TIFFfile::processIFD()
 	{
 		// build field record
 		tempField.nextField = nullptr;
-		memcpy(&tempField.tag, buffer + next, 2);		// tag
-		memcpy(&tempField.type, buffer + next + 2, 2);	// type
-		memcpy(&tempField.count, buffer + next + 4, 4);	// count
-		memcpy(&tempField.offset, buffer + next + 8, 4);	// offset
+		memcpy(&tempField.field.tag, buffer + next, 2);		// tag
+		memcpy(&tempField.field.type, buffer + next + 2, 2);	// type
+		memcpy(&tempField.field.count, buffer + next + 4, 4);	// count
+		memcpy(&tempField.field.offset, buffer + next + 8, 4);	// offset
 		sprintf_s(sMsg, "#%d/%d", i + 1, nEntries);
 		sprintf_s(
 			sValue,
 			"At 0x%X: Tag 0x%X, Type 0x%X, Count 0x%X, Offset 0x%X",
 			((*currentIFD).address + 2 + (12 * i)),
-			tempField.tag,
-			tempField.type,
-			tempField.count,
-			tempField.offset
+			tempField.field.tag,
+			tempField.field.type,
+			tempField.field.count,
+			tempField.field.offset
 		);
 		// insert into FieldList;
 		ifdSet.insertField(tempField, currentIFD);
@@ -1132,7 +1466,7 @@ void TIFFfile::testDict(IFDlist *)
 {
 	uint16_t	t;
 	FieldDict	field;
-	TagMeans	dict;
+	TagMeans &	dict = ifdSet.exifTags;
 
 	do
 	{
@@ -1146,7 +1480,7 @@ void TIFFfile::testDict(IFDlist *)
 			continue;
 		}
 		// that was found
-		// dict.printTag(field);
+		dict.printTag(field);
 	} while (t != 9999);
 	// at the end dump them all
 	dict.print();
@@ -1184,7 +1518,7 @@ void TIFFfile::testList(IFDlist * list)
 {
 	IFD			ifd;
 	IFD *		pIFD;
-	IFDfield	field;
+	IFDfield	f;
 	IFDfield *	pField;
 
 	printf("\ttestList():\n");
@@ -1205,10 +1539,10 @@ void TIFFfile::testList(IFDlist * list)
 	ifd.processed = false;
 
 	// builds a new field
-	field.tag = 0;
-	field.type = 0;
-	field.count = 0;
-	field.offset = 0;
+	f.field.tag = 0;
+	f.field.type = 0;
+	f.field.count = 0;
+	f.field.offset = 0;
 
 	dumpIFDset(list);
 
@@ -1234,13 +1568,13 @@ void TIFFfile::testList(IFDlist * list)
 			j++
 			)
 		{
-			field.tag = 0;
+			f.field.tag = 0;
 			pField = (IFDfield *)::operator new(sizeof(IFDfield));
-			(*pField) = field;
+			(*pField) = f;
 			printf(
 				"\tfield: tag %d, type %d\n",
-				(*pField).tag,
-				(*pField).type
+				(*pField).field.tag,
+				(*pField).field.type
 			);
 			list->insertField(*pField, list->ifd);
 		}	// end for j
@@ -1260,12 +1594,12 @@ void TIFFfile::testList(IFDlist * list)
 			j++
 			)
 		{
-			field.tag = 8*j;
-			field.type = pIFD->index;
-			field.count = (pIFD->entries) + 1;
-			field.offset = j + 1;
+			f.field.tag = 8*j;
+			f.field.type = pIFD->index;
+			f.field.count = (pIFD->entries) + 1;
+			f.field.offset = j + 1;
 			pField = (IFDfield *)::operator new(sizeof(IFDfield));
-			(*pField) = field;
+			(*pField) = f;
 			list->insertField(*pField, pIFD );
 		}	// end for j
 		pIFD = pIFD->nextIFD;
